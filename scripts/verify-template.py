@@ -10,8 +10,6 @@ from e2b import Sandbox
 template_id = os.environ["CUBE_TEMPLATE_ID"]
 
 with Sandbox.create(template=template_id, timeout=300) as sandbox:
-    print(f"sandbox_id={sandbox.sandbox_id}")
-
     result = sandbox.commands.run(
         "coding-agent-smoke && "
         "test ! -e /root/.codex/auth.json && "
