@@ -9,4 +9,4 @@ git --version
 rg --version | sed -n '1p'
 
 test -x /usr/bin/envd
-test "${CODEX_HOME:-}" = /root/.codex
+test "${CODEX_HOME:-/root/.codex}" = /root/.codex

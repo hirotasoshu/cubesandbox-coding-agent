@@ -43,6 +43,12 @@ docker build -t cubesandbox-coding-agent .
 docker run --rm cubesandbox-coding-agent coding-agent-smoke
 ```
 
+With a registered template and Cube API environment variables configured:
+
+```bash
+python scripts/verify-template.py
+```
+
 ## Credentials
 
 Do not add `~/.codex/auth.json`, OpenCode auth state, API keys, SSH keys, or Git
