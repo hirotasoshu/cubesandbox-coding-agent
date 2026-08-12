@@ -1,43 +1,72 @@
 #!/usr/bin/env python3
-from __future__ import annotations
-
+import argparse
+import json
+import os
+import shlex
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from cubesandbox import Sandbox
-
-from _common import create_sandbox, kill_sandbox, required_argument, run, stage_auth
+from examples.oauth import codex_auth_json, load_openai_oauth
 
 
-MODEL = required_argument("CODEX_MODEL")
-sandbox = create_sandbox()
+parser = argparse.ArgumentParser()
+parser.add_argument("--dev-sidecar", action="store_true")
+args = parser.parse_args()
+if args.dev_sidecar:
+    from examples.dev_sidecar import setup_dev_sidecar
+
+    setup_dev_sidecar()
+
+from e2b import Sandbox
+
+
+template = os.environ["CUBE_TEMPLATE_ID"]
+model = shlex.quote(os.environ["CODEX_MODEL"])
+openai = load_openai_oauth()
+
+sandbox = Sandbox.create(template, timeout=600)
 resumed = None
 try:
-    stage_auth(sandbox, "codex")
-    run(
-        sandbox,
-        "printf '%s\\n' 'Create plan.md with one line: first turn complete' | "
-        "codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check "
-        f"--model {MODEL} --color never -",
+    setup = sandbox.commands.run(
+        "install -d -m 700 /root/.codex && install -m 600 /dev/null /root/.codex/auth.json",
+        user="root",
     )
-    sandbox_id = sandbox.sandbox_id
-    sandbox.pause(timeout=60)
-    print("sandbox_paused=true")
+    if setup.exit_code != 0:
+        raise RuntimeError(setup.stderr)
+    sandbox.files.write("/root/.codex/auth.json", codex_auth_json(openai), user="root")
 
+    first = sandbox.commands.run(
+        "codex exec --dangerously-bypass-approvals-and-sandbox "
+        f"--skip-git-repo-check --json --model {model} "
+        "'Create plan.md with a 3-step plan for a TODO CLI app'",
+        cwd="/workspace",
+        user="root",
+        timeout=600,
+    )
+    if first.exit_code != 0:
+        raise RuntimeError(first.stderr)
+    events = [json.loads(line) for line in first.stdout.splitlines() if line]
+    thread_id = next(event["thread_id"] for event in events if event["type"] == "thread.started")
+
+    sandbox_id = sandbox.sandbox_id
+    sandbox.pause()
     resumed = Sandbox.connect(sandbox_id)
-    run(
-        resumed,
-        "printf '%s\\n' 'Append a second line to plan.md: resumed turn complete' | "
-        "codex exec resume --last --dangerously-bypass-approvals-and-sandbox "
-        f"--skip-git-repo-check --model {MODEL} -",
+
+    second = resumed.commands.run(
+        f"codex exec resume {shlex.quote(thread_id)} "
+        "--dangerously-bypass-approvals-and-sandbox --skip-git-repo-check "
+        f"--model {model} 'Now implement step 1 of the plan'",
+        cwd="/workspace",
+        user="root",
+        timeout=600,
     )
-    run(
-        resumed,
-        "test \"$(sed -n '1p' /workspace/plan.md)\" = 'first turn complete' && "
-        "test \"$(sed -n '2p' /workspace/plan.md)\" = 'resumed turn complete'",
-    )
-    print("CODEX_PAUSE_RESUME_OK")
+    print(second.stdout, end="")
+    if second.exit_code != 0:
+        raise RuntimeError(second.stderr)
+
+    print(resumed.files.read("/workspace/plan.md", user="root"))
 finally:
-    kill_sandbox(resumed or sandbox)
+    try:
+        (resumed or sandbox).kill()
+    except Exception as cleanup_error:
+        print(f"Sandbox cleanup failed: {cleanup_error}", file=sys.stderr)
+        raise

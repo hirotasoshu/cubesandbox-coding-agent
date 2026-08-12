@@ -1,1 +1,4 @@
+e2b==2.38.0
 cubesandbox>=0.6.0,<0.7
+requests>=2,<3
+aiohttp>=3.9,<4

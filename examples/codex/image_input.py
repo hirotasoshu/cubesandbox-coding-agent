@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import shlex
+from pathlib import Path
+
+from examples.oauth import codex_auth_json, load_openai_oauth
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dev-sidecar", action="store_true")
+args = parser.parse_args()
+if args.dev_sidecar:
+    from examples.dev_sidecar import setup_dev_sidecar
+
+    setup_dev_sidecar()
+
+from e2b import Sandbox
+
+
+template = os.environ["CUBE_TEMPLATE_ID"]
+model = shlex.quote(os.environ["CODEX_MODEL"])
+repository_url = os.environ["REPOSITORY_URL"]
+mockup_path = Path(os.environ["MOCKUP_PATH"])
+openai = load_openai_oauth()
+
+with Sandbox.create(template, timeout=600) as sandbox:
+    setup = sandbox.commands.run(
+        "install -d -m 700 /root/.codex && install -m 600 /dev/null /root/.codex/auth.json",
+        user="root",
+    )
+    if setup.exit_code != 0:
+        raise RuntimeError(setup.stderr)
+    sandbox.files.write("/root/.codex/auth.json", codex_auth_json(openai), user="root")
+    sandbox.files.write("/workspace/mockup.png", mockup_path.read_bytes(), user="root")
+    sandbox.git.clone(repository_url, path="/workspace/repo", depth=1)
+
+    result = sandbox.commands.run(
+        "codex exec --dangerously-bypass-approvals-and-sandbox "
+        f"--skip-git-repo-check --model {model} --image /workspace/mockup.png "
+        "'Implement this UI design as a React component'",
+        cwd="/workspace/repo",
+        user="root",
+        timeout=600,
+        on_stdout=lambda data: print(data, end=""),
+    )
+    if result.exit_code != 0:
+        raise SystemExit(result.exit_code)

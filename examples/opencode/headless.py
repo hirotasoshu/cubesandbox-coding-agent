@@ -2,7 +2,6 @@
 import argparse
 import os
 import shlex
-import sys
 
 from examples.oauth import load_openai_oauth, opencode_auth_json
 
@@ -22,9 +21,7 @@ template = os.environ["CUBE_TEMPLATE_ID"]
 model = shlex.quote(os.environ["OPENCODE_MODEL"])
 openai = load_openai_oauth()
 
-sandbox = Sandbox.create(template, timeout=600)
-resumed = None
-try:
+with Sandbox.create(template, timeout=600) as sandbox:
     setup = sandbox.commands.run(
         "install -d -m 700 /root/.local/share/opencode && "
         "install -m 600 /dev/null /root/.local/share/opencode/auth.json",
@@ -36,35 +33,13 @@ try:
         "/root/.local/share/opencode/auth.json", opencode_auth_json(openai), user="root"
     )
 
-    first = sandbox.commands.run(
+    result = sandbox.commands.run(
         f"opencode run --auto --model {model} "
-        "'Create plan.md with a 3-step plan for a TODO CLI app'",
+        "'Create a hello world HTTP server in Go'",
         cwd="/workspace",
         user="root",
         timeout=600,
     )
-    if first.exit_code != 0:
-        raise RuntimeError(first.stderr)
-
-    sandbox_id = sandbox.sandbox_id
-    sandbox.pause()
-    resumed = Sandbox.connect(sandbox_id)
-
-    second = resumed.commands.run(
-        f"opencode run --continue --auto --model {model} "
-        "'Now implement step 1 of the plan'",
-        cwd="/workspace",
-        user="root",
-        timeout=600,
-    )
-    print(second.stdout, end="")
-    if second.exit_code != 0:
-        raise RuntimeError(second.stderr)
-
-    print(resumed.files.read("/workspace/plan.md", user="root"))
-finally:
-    try:
-        (resumed or sandbox).kill()
-    except Exception:
-        if resumed is not None:
-            sandbox.kill()
+    print(result.stdout, end="")
+    if result.exit_code != 0:
+        raise SystemExit(result.exit_code)
