@@ -4,13 +4,14 @@ Public CubeSandbox template image with:
 
 - CubeSandbox `envd`
 - OpenAI Codex CLI
+- Anthropic Claude Code CLI
 - OpenCode CLI
 - Node.js 24
 - Python 3
 - Git, Git LFS, GitHub-friendly SSH tooling
 - common build and repository inspection utilities
 
-The image contains no credentials. Mount or inject per-user Codex/OpenCode
+The image contains no credentials. Mount or inject per-user agent
 authentication state when a sandbox is created.
 
 ## Image
@@ -51,11 +52,12 @@ python scripts/verify-template.py
 
 ## Credentials
 
-Do not add `~/.codex/auth.json`, OpenCode auth state, API keys, SSH keys, or Git
-credentials to this image. Keep authentication state per user and outside the
-immutable template.
+Do not add `~/.codex/auth.json`, Claude Code/OpenCode auth state, API keys, SSH
+keys, or Git credentials to this image. Keep authentication state per user and
+outside the immutable template. Run Claude Code as the non-root `agent` user;
+`/workspace` is writable by that user.
 
 ## Examples
 
-See [`examples/README.md`](examples/README.md) for the complete Codex and
-OpenCode example catalog, setup, runnable commands, and security boundaries.
+See [`examples/README.md`](examples/README.md) for the complete agent example
+catalog, setup, runnable commands, and security boundaries.

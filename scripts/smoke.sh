@@ -10,3 +10,6 @@ rg --version | sed -n '1p'
 
 test -x /usr/bin/envd
 test "${CODEX_HOME:-/root/.codex}" = /root/.codex
+id agent >/dev/null
+runuser -u agent -- test -w /workspace
+runuser -u agent -- env HOME=/home/agent claude --version

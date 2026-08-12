@@ -7,6 +7,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG NODE_MAJOR=24
 ARG CODEX_VERSION=0.147.0
 ARG OPENCODE_VERSION=1.18.16
+ARG CLAUDE_CODE_VERSION=2.1.228
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -36,9 +37,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install --global \
        "@openai/codex@${CODEX_VERSION}" \
+       "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" \
        "opencode-ai@${OPENCODE_VERSION}" \
     && git lfs install --system \
     && codex --version \
+    && claude --version \
     && opencode --version \
     && node --version \
     && python3 --version \
@@ -46,10 +49,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /root/.npm
 
 ENV CODEX_HOME=/root/.codex \
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
     NPM_CONFIG_UPDATE_NOTIFIER=false \
     OPENCODE_DISABLE_AUTOUPDATE=true
 
-RUN mkdir -p /workspace /root/.codex /root/.local/share/opencode
+RUN useradd --create-home --shell /bin/bash agent \
+    && mkdir -p /workspace /root/.codex /root/.local/share/opencode \
+    && chown agent:agent /workspace
 
 COPY scripts/smoke.sh /usr/local/bin/coding-agent-smoke
 
