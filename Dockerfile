@@ -18,6 +18,7 @@ RUN apt-get update \
        git \
        git-lfs \
        gnupg \
+       iproute2 \
        jq \
        less \
        openssh-client \
