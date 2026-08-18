@@ -3,7 +3,8 @@ import argparse
 import os
 import shlex
 
-from examples.oauth import codex_auth_json, load_openai_oauth
+from examples.provider import setup_codex
+from examples.workspace import download_test_workspace, upload_test_workspace
 
 
 parser = argparse.ArgumentParser()
@@ -19,25 +20,22 @@ from e2b import Sandbox
 
 template = os.environ["CUBE_TEMPLATE_ID"]
 model = shlex.quote(os.environ["CODEX_MODEL"])
-openai = load_openai_oauth()
 
 with Sandbox.create(template, timeout=600) as sandbox:
-    setup = sandbox.commands.run(
-        "install -d -m 700 /root/.codex && install -m 600 /dev/null /root/.codex/auth.json",
-        user="root",
-    )
-    if setup.exit_code != 0:
-        raise RuntimeError(setup.stderr)
-    sandbox.files.write("/root/.codex/auth.json", codex_auth_json(openai), user="root")
+    upload_test_workspace(sandbox)
+    runtime = setup_codex(sandbox)
 
     result = sandbox.commands.run(
         "codex exec --dangerously-bypass-approvals-and-sandbox "
-        f"--skip-git-repo-check --model {model} "
-        "'Create a hello world HTTP server in Go'",
+        f"--skip-git-repo-check --model {model} {runtime.args} "
+        "'Create fibonacci.exs with an idiomatic lazy Fibonacci number generator "
+        "in Elixir and a short example that prints the first 10 numbers'",
         cwd="/workspace",
         user="root",
         timeout=600,
+        envs=runtime.envs,
     )
     print(result.stdout, end="")
+    print(f"Workspace: {download_test_workspace(sandbox, 'codex-headless')}")
     if result.exit_code != 0:
         raise SystemExit(result.exit_code)
