@@ -18,6 +18,10 @@ on:
         description: Claude Code npm version
         required: false
         default: "2.1.228"
+      deepseek_harness_version:
+        description: DeepSeek Harness npm version
+        required: false
+        default: "0.1.0-rc.7"
 
 env:
   REGISTRY: ghcr.io
@@ -61,5 +65,6 @@ jobs:
             CODEX_VERSION=${{ inputs.codex_version || '0.147.0' }}
             OPENCODE_VERSION=${{ inputs.opencode_version || '1.18.16' }}
             CLAUDE_CODE_VERSION=${{ inputs.claude_code_version || '2.1.228' }}
+            DEEPSEEK_HARNESS_VERSION=${{ inputs.deepseek_harness_version || '0.1.0-rc.7' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

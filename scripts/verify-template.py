@@ -36,13 +36,21 @@ with Sandbox.create(template=template_id, timeout=300) as sandbox:
         background=True,
         timeout=0,
     )
+    dsh = sandbox.commands.run(
+        "dsh web --host 127.0.0.1 --port 3080",
+        cwd="/workspace",
+        user="root",
+        background=True,
+        timeout=0,
+    )
 
     try:
         time.sleep(4)
         listeners = sandbox.commands.run(
-            "ss -lnt | grep -E ':(4096|4500) ' && "
+            "ss -lnt | grep -E ':(3080|4096|4500) ' && "
             "curl -fsS -u opencode:smoke "
-            "http://127.0.0.1:4096/global/health",
+            "http://127.0.0.1:4096/global/health && "
+            "curl -fsS http://127.0.0.1:3080/ >/dev/null",
             user="root",
             timeout=30,
         )
@@ -53,5 +61,30 @@ with Sandbox.create(template=template_id, timeout=300) as sandbox:
     finally:
         codex.kill()
         opencode.kill()
+        dsh.kill()
 
-    print("AGENT_SERVERS_OK")
+    print("AGENT_SERVERS_AND_DSH_OK")
+
+    for _ in range(60):
+        docker = sandbox.commands.run(
+            "docker info --format '{{.Driver}}' 2>/dev/null || true",
+            user="root",
+            timeout=10,
+        )
+        if docker.stdout.strip():
+            break
+        time.sleep(0.5)
+    else:
+        raise RuntimeError("Docker daemon did not become ready")
+
+    if docker.stdout.strip() != "vfs":
+        raise RuntimeError(f"Unexpected Docker storage driver: {docker.stdout!r}")
+    container = sandbox.commands.run(
+        "docker run --rm alpine:3.20 echo DOCKER_IN_CUBE_OK",
+        user="root",
+        timeout=180,
+    )
+    print(container.stdout, end="")
+    if container.exit_code != 0:
+        print(container.stderr, end="")
+        raise SystemExit(container.exit_code)

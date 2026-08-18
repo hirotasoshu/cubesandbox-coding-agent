@@ -115,6 +115,7 @@ class ExampleImportsTest(unittest.TestCase):
         self.assertEqual(
             e2b_importers,
             {
+                "docker/headless.py",
                 "codex/headless.py",
                 "codex/image_input.py",
                 "codex/pause_resume.py",

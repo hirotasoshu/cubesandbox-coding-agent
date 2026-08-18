@@ -7,6 +7,7 @@ CubeSandbox coding-agent template. It covers:
 - using an OpenAI-compatible Responses API or OpenAI OAuth fallback;
 - uploading a local test workspace and downloading the agent's result;
 - pause/resume, streamed events, image input, and the OpenCode HTTP API;
+- building and running Docker containers inside the CubeSandbox MicroVM;
 - optional CubeEgress policies that keep real credentials outside the VM;
 - an optional local-development sidecar.
 
@@ -330,6 +331,22 @@ python -m examples.opencode.network_policy
 python -m examples.opencode.api_key_policy
 ```
 
+## Run the Docker example
+
+The Docker daemon starts automatically with the sandbox and is configured with
+the `vfs` storage driver. The example uploads the test workspace, builds its
+[`Dockerfile`](test_workspace/Dockerfile), runs the resulting image, and
+downloads the workspace archive:
+
+```bash
+python -m examples.docker.headless
+tar -tzf workspace-output/docker.tar.gz
+```
+
+Use `coding-agent-large` or `coding-agent-xlarge` for substantial builds. The
+`vfs` driver copies image layers instead of using nested OverlayFS and therefore
+uses significantly more writable-layer space.
+
 ## Run all regular examples
 
 Set `REPOSITORY_URL` and `MOCKUP_PATH` first, then run:
@@ -345,6 +362,7 @@ python -m examples.opencode.headless
 python -m examples.opencode.repository
 python -m examples.opencode.pause_resume
 python -m examples.opencode.http_api
+python -m examples.docker.headless
 ```
 
 Run policy examples separately because they exercise a different security
@@ -374,6 +392,8 @@ python -m examples.opencode.api_key_policy
   delete it as appropriate.
 - The OpenCode HTTP API uses a random password but is still intended for
   short-lived example sessions, not permanent public hosting.
+- The inner Docker daemon runs as root in the MicroVM. Treat access to its
+  socket as root-equivalent inside that sandbox.
 
 ## Troubleshooting
 
