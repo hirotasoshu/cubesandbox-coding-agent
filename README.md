@@ -34,8 +34,8 @@ scripts/create-template-profiles.sh
 |---|---:|---:|---:|---|
 | `coding-agent-small` | 1 vCPU | 2 GiB | 20 GiB | Lightweight edits and inspection |
 | `coding-agent-medium` | 2 vCPU | 4 GiB | 30 GiB | General coding agents |
-| `coding-agent-large` | 4 vCPU | 8 GiB | 50 GiB | Docker builds and larger repositories |
-| `coding-agent-xlarge` | 6 vCPU | 12 GiB | 80 GiB | Heavy single-sandbox workloads |
+| `coding-agent-large` | 3 vCPU | 6 GiB | 50 GiB | Docker builds and larger repositories |
+| `coding-agent-xlarge` | 4 vCPU | 8 GiB | 80 GiB | Heavy single-sandbox workloads |
 
 Ports `4096` and `4500` are reserved for OpenCode server and Codex app-server.
 They are not started by default. `envd` remains available on port `49983`.
